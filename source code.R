@@ -1,0 +1,73 @@
+library("data.table")
+
+fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+download.file(fileUrl, destfile = paste0(getwd(), '/repdata%2Fdata%2Factivity.zip'), method = "curl")
+unzip("repdata%2Fdata%2Factivity.zip",exdir = "data")
+
+activityDT <- data.table::fread(input = "data/activity.csv")
+
+Total_Steps <- activityDT[, c(lapply(.SD, sum, na.rm = TRUE)), .SDcols = c("steps"), by = .(date)] 
+
+head(Total_Steps, 10)
+
+library(ggplot2)
+
+png("hist1.png", width=480, height=480)
+
+ggplot(Total_Steps, aes(x = steps)) +
+  geom_histogram(fill = "blue", binwidth = 1000) +
+  labs(title = "Daily Steps", x = "Steps", y = "Frequency")
+
+dev.off()
+
+Total_Steps[, .(Mean_Steps = mean(steps), Median_Steps = median(steps))]
+
+IntervalDT <- activityDT[, c(lapply(.SD, mean, na.rm = TRUE)), .SDcols = c("steps"), by = .(interval)] 
+
+ggplot(IntervalDT, aes(x = interval , y = steps)) +
+  geom_line(color="blue", size=1) +
+  labs(title = "Avg. Daily Steps", x = "Interval", y = "Avg. Steps per day")
+
+IntervalDT[steps == max(steps), .(max_interval = interval)]
+
+activityDT[is.na(steps), .N ]
+
+# alternative solution
+nrow(activityDT[is.na(steps),])
+
+# Filling in missing values by mean of dataset. 
+activityDT[is.na(steps), "steps"] <- round(activityDT[, c(lapply(.SD, mean, na.rm = TRUE)), .SDcols = c("steps")])
+
+data.table::fwrite(x = activityDT, file = "data/tidyData.csv", quote = FALSE)
+
+
+# total number of steps taken per day
+Total_Steps <- activityDT[, c(lapply(.SD, sum, na.rm = TRUE)), .SDcols = c("steps"), by = .(date)] 
+
+# mean and median total number of steps taken per day
+Total_Steps[, .(Mean_Steps = mean(steps), Median_Steps = median(steps))]
+
+library(ggplot2)
+ggplot(Total_Steps, aes(x = steps)) +
+  geom_histogram(fill = "blue", binwidth = 1000) +
+  labs(title = "Daily Steps", x = "Steps", y = "Frequency")
+
+
+activityDT[, dateTime := as.POSIXct(date, format = "%Y-%m-%d")]
+activityDT[, `Day of Week`:= weekdays(x = dateTime)]
+
+activityDT[grepl(pattern = "Monday|Tuesday|Wednesday|Thursday|Friday", x = `Day of Week`), "weekday or weekend"] <- "weekday"
+activityDT[grepl(pattern = "Saturday|Sunday", x = `Day of Week`), "weekday or weekend"] <- "weekend"
+activityDT[, `weekday or weekend` := as.factor(`weekday or weekend`)]
+
+
+
+
+
+
+
+
+
+
+
+
